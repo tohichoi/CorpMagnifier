@@ -99,8 +99,16 @@ def insert_stock_records(cur: sqlite3.Cursor, df: pd.DataFrame):
         conn.commit()
         corp_pk = \
             cur.execute('SELECT id from Corporation WHERE name=? AND sector=?', (corp_name, sector_pk)).fetchone()[0]
-        cur.execute('INSERT INTO StockCode VALUES (?, ?, ?, ?, ?)', (None, market_pk, stock_code, corp_pk, ''))
-    conn.commit()
+
+        try:
+            cur.execute('INSERT INTO StockCode VALUES (?, ?, ?, ?, ?)', (None, market_pk, stock_code, corp_pk, ''))
+            conn.commit()
+        except sqlite3.IntegrityError as e:
+            # UNIQUE contraint 에 걸리면 OK
+            if 'UNIQUE' in e.args[0]:
+                pass
+            else:
+                raise e
 
     # Corporation
     return result
