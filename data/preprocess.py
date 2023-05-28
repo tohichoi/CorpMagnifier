@@ -68,7 +68,7 @@ def insert_stock_records(cur: sqlite3.Cursor, df: pd.DataFrame):
             result['Sector'] = res.rowcount
         except sqlite3.IntegrityError as e:
             # UNIQUE contraint 에 걸리면 OK
-            if 'UNIQUE' in e.args:
+            if 'UNIQUE' in e.args[0]:
                 pass
             else:
                 raise e
@@ -82,7 +82,7 @@ def insert_stock_records(cur: sqlite3.Cursor, df: pd.DataFrame):
             result['ReportType'] = res.rowcount
         except sqlite3.IntegrityError as e:
             # UNIQUE contraint 에 걸리면 OK
-            if 'UNIQUE' in e.args:
+            if 'UNIQUE' in e.args[0]:
                 continue
             else:
                 raise e
