@@ -1,0 +1,8 @@
+/data/archive/
+/db/CorpMagnifier.db
+/db/CorpMagnifier.db-journal
+/db/CorpMagnifier.sqbpro
+/src/.ipynb_checkpoints/
+/src/.env
+/.ipynb_checkpoints/
+/src/venv/
