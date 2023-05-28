@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 import unittest
-from collections import defaultdict
-from datetime import date, datetime
-
 import pandas as pd
 from pathlib import Path
 import sqlite3
@@ -11,6 +8,10 @@ from tqdm import tqdm
 root = Path('archive/utf-8/')
 
 pd.options.display.float_format = '{:,.0f}'.format
+
+# create database with sqlite3
+# cd db
+# sqlite3 CorpMagnifier.db <CorpMagnifier.db.sql
 
 conn = sqlite3.connect('../db/CorpMagnifier.db')
 cur = conn.cursor()
@@ -21,56 +22,11 @@ def csv_error_handler(bad_line: list[str]) -> list[str] | None:
     return None
 
 
-dtypes_number = [
-    '당기',
-    '당기 1분기',
-    '당기 1분기 3개월',
-    '당기 1분기 누적',
-    '당기 1분기말',
-    '당기 3분기',
-    '당기 3분기 3개월',
-    '당기 3분기 누적',
-    '당기 3분기말',
-    '당기 반기',
-    '당기 반기 3개월',
-    '당기 반기 누적',
-    '당기 반기말',
-    '전기',
-    '전기 1분기',
-    '전기 1분기 3개월',
-    '전기 1분기 누적',
-    '전기 3분기',
-    '전기 3분기 3개월',
-    '전기 3분기 누적',
-    '전기 반기',
-    '전기 반기 3개월',
-    '전기 반기 누적',
-    '전기말',
-    '전전기',
-    '전전기말',
-]
-
-dtypes_date = [
-    '결산월', '결산기준일'
-]
-
-dtypes_str = [
-    '종목코드', '회사명',
-]
-
-dtypes_type = dict.fromkeys(dtypes_str, str)
-
-
-# dtypes_type.update(dict.fromkeys(dtypes_number, int))
-
 def int_converter(value):
     try:
         return float(value)
     except (ValueError, TypeError):
         print(f'"{value}" cannot be converted to float')
-
-
-converters = dict.fromkeys(dtypes_number, int_converter)
 
 
 def delete_all_records(cur: sqlite3.Cursor):
@@ -93,8 +49,6 @@ def insert_stock_records(cur: sqlite3.Cursor, df: pd.DataFrame):
     # Market
     df_filter = df[['시장구분']].drop_duplicates()
     record_data = [(None, d[0], '') for d in df_filter.to_records(index=False)]
-    n = len(record_data)
-    # record_data = list(zip(n * [None], data, n * [""]))
     try:
         res = cur.executemany('INSERT INTO Market VALUES (?, ?, ?)', record_data)
         conn.commit()
@@ -144,7 +98,7 @@ def insert_stock_records(cur: sqlite3.Cursor, df: pd.DataFrame):
         cur.execute('INSERT INTO Corporation VALUES (?, ?, ?, ?)', (None, corp_name, sector_pk, ''))
         conn.commit()
         corp_pk = \
-        cur.execute('SELECT id from Corporation WHERE name=? AND sector=?', (corp_name, sector_pk)).fetchone()[0]
+            cur.execute('SELECT id from Corporation WHERE name=? AND sector=?', (corp_name, sector_pk)).fetchone()[0]
         cur.execute('INSERT INTO StockCode VALUES (?, ?, ?, ?, ?)', (None, market_pk, stock_code, corp_pk, ''))
     conn.commit()
 
@@ -152,7 +106,7 @@ def insert_stock_records(cur: sqlite3.Cursor, df: pd.DataFrame):
     return result
 
 
-def get_report(cur:sqlite3.Cursor, report_quarter, report_year, corp_pk, report_type_pk, report_date):
+def get_report(cur: sqlite3.Cursor, report_quarter, report_year, corp_pk, report_type_pk, report_date):
     res = cur.execute('SELECT id from Report WHERE quarter=? AND year=? AND corporation=? AND report_type=? AND date=?',
                       (report_quarter, report_year, corp_pk, report_type_pk, report_date))
     record = res.fetchone()
@@ -160,10 +114,6 @@ def get_report(cur:sqlite3.Cursor, report_quarter, report_year, corp_pk, report_
         return record[0]
 
     return None
-
-
-def insert_one_record(cur, row):
-    pass
 
 
 def insert_records(cur: sqlite3.Cursor, df: pd.DataFrame, year):
@@ -192,13 +142,19 @@ def insert_records(cur: sqlite3.Cursor, df: pd.DataFrame, year):
         reportitem_account_code = row[10]
         reportitem_currency = row[9]
         cur.execute('INSERT INTO ReportItem VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    (None, reportitem_currency, reportitem_account_code, reportitem_account_name, reportitem_amount, '', report_pk))
+                    (None, reportitem_currency, reportitem_account_code, reportitem_account_name, reportitem_amount, '',
+                     report_pk))
         conn.commit()
         pbar.update(1)
 
 
 def import_document(f):
     common_columns = ['재무제표종류', '종목코드', '회사명', '시장구분', '업종', '업종명', '결산월', '결산기준일', '보고서종류', '통화', '항목코드', '항목명', '당기']
+    dtypes_str = [
+        '종목코드', '회사명',
+    ]
+
+    dtypes_type = dict.fromkeys(dtypes_str, str)
 
     # Market
     #   '시장구분'
@@ -218,51 +174,41 @@ def import_document(f):
     df = pd.read_csv(f, sep='\t', thousands=',', engine="python", dtype=dtypes_type, usecols=valid_column_indices)
     df.columns = common_columns
 
-    # headers = ','.join(list(df.columns))
-    # print(headers)
-
-    # invalid_columns = [c for c in df.columns if 'unnamed' in c.lower()]
-    # if len(invalid_columns) > 0:
-    #     df = df.drop(labels=invalid_columns, axis=1)
-    #
-    # for c in df.columns:
-    #     if c not in common_columns:
-    #         value_columns.add(c)
-    # print(df.columns)
     return df
 
 
-r = root / Path('현금흐름표')
-# r = root / Path('포괄손익계산서')
-# r = root
-value_columns = set()
+if __name__ == '__main__':
+    data_dirs = [
+        '손익계산서', '손익계산서-연결', '재무상태표', '자본변동표-연결', '재무상태표', '재무상태표-연결', '포괄손익계산서', '포괄손익계산서-연결', '현금흐름표', '현금흐름표-연결',
+    ]
 
-filelist = list(r.rglob('*.txt'))
+    for dd in data_dirs:
+        r = root / Path(dd)
 
-delete_all_records(cur)
+        filelist = list(r.rglob('*.txt'))
 
-prev_parent = None
-for f in filelist:
-    # df = pd.read_csv(f, sep='\t', thousands=',', engine="python", on_bad_lines=csv_error_handler)
-    # df = pd.read_csv(f, sep='\t', thousands=',', engine="python", dtype=dtypes_type, converters=converters)
-    if prev_parent != f.parent:
-        prev_parent = f.parent
-        print(f.parent)
-    print(f)
+        delete_all_records(cur)
 
-    year = int(f.name[:4])
+        prev_parent = None
+        for f in filelist:
+            if prev_parent != f.parent:
+                prev_parent = f.parent
+                print(f.parent)
+            print(f)
 
-    df = import_document(f)
-    res = insert_stock_records(cur, df)
-    res = insert_records(cur, df, year)
+            year = int(f.name[:4])
 
-# pd.set_option('display.max_rows', None)
-# pd.set_option('display.max_columns', None)
-# pd.set_option('display.width', None)
-# pd.set_option('display.max_colwidth', -1)
+            df = import_document(f)
+            res = insert_stock_records(cur, df)
+            res = insert_records(cur, df, year)
 
-if len(value_columns) > 0:
-    print(value_columns)
+    # pd.set_option('display.max_rows', None)
+    # pd.set_option('display.max_columns', None)
+    # pd.set_option('display.width', None)
+    # pd.set_option('display.max_colwidth', -1)
+
+    # if len(value_columns) > 0:
+    #     print(value_columns)
 
 
 class Test(unittest.TestCase):
@@ -297,7 +243,7 @@ class Test(unittest.TestCase):
         delete_all_records(cur)
         df = import_document(self.f)
         res = insert_stock_records(cur, df)
-        res = insert_records(cur, df)
+        res = insert_records(cur, df, year)
         self.assertGreater(sum(res.values()), 0)
 
     def doCleanups(self) -> None:
