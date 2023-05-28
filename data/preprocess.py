@@ -127,14 +127,23 @@ def get_report(cur: sqlite3.Cursor, report_quarter, report_year, corp_pk, report
 def insert_records(cur: sqlite3.Cursor, df: pd.DataFrame, year):
     pbar = tqdm(desc='Importing', total=df.shape[0])
     for idx, row in df.iterrows():
+        corp_name = str(row[2].strip())
+        report_type = str(row[0]).strip()
         # market_pk = cur.execute('SELECT id from Market WHERE name=?', (str(row[3]).strip(),)).fetchone()[0]
-        report_type_pk = cur.execute('select id from ReportType where name=?', (str(row[0]).strip(),)).fetchone()[0]
+        report_type_pk = cur.execute('select id from ReportType where name=?', (report_type,)).fetchone()[0]
 
         # Report
-        report_date = row[7]
+        report_date = str(row[7]).strip()
         report_year = year
-        report_quarter = row[8]
-        corp_pk = cur.execute('SELECT id from Corporation WHERE name=?', (row[2],)).fetchone()[0]
+        report_quarter = str(row[8]).strip()
+        r = cur.execute('SELECT id from Corporation WHERE name=?', (corp_name,))
+        if r:
+            rr = r.fetchone()
+            if not rr:
+                raise Exception(f'Cannot find corp: {corp_name}')
+            corp_pk = rr[0]
+        else:
+            raise Exception(f'Cannot find corp: {corp_name}')
         report_pk = get_report(cur, report_quarter, report_year, corp_pk, report_type_pk, report_date)
         if not report_pk:
             cur.execute('INSERT INTO Report VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -145,10 +154,10 @@ def insert_records(cur: sqlite3.Cursor, df: pd.DataFrame, year):
                 raise sqlite3.OperationalError(f'Cannot find report')
 
         # ReportItem
-        reportitem_amount = row[12]
-        reportitem_account_name = row[11]
-        reportitem_account_code = row[10]
-        reportitem_currency = row[9]
+        reportitem_amount = str(row[12]).strip()
+        reportitem_account_name = str(row[11]).strip()
+        reportitem_account_code = str(row[10]).strip()
+        reportitem_currency = str(row[9]).strip()
         cur.execute('INSERT INTO ReportItem VALUES (?, ?, ?, ?, ?, ?, ?)',
                     (None, reportitem_currency, reportitem_account_code, reportitem_account_name, reportitem_amount, '',
                      report_pk))
@@ -222,7 +231,6 @@ if __name__ == '__main__':
 class Test(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.f = filelist[1]
 
     @unittest.skip("")
     def test_multiple_loading(self):
@@ -239,6 +247,7 @@ class Test(unittest.TestCase):
 
     @unittest.skip("")
     def test_valid_df(self):
+        self.f = filelist[1]
         df = import_document(self.f)
         for c in df.columns:
             l = list(df[c].unique())
@@ -249,6 +258,10 @@ class Test(unittest.TestCase):
 
     def test_insert_stock(self):
         delete_all_records(cur)
+        # self.f = filelist[1]
+        fn = Path('2017_반기보고서_01_재무상태표_20230301.txt')
+        self.f = root / Path('재무상태표') / fn
+        year = int(fn.name[:4])
         df = import_document(self.f)
         res = insert_stock_records(cur, df)
         res = insert_records(cur, df, year)
