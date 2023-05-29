@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+import argparse
 import unittest
 import pandas as pd
 from pathlib import Path
 import sqlite3
 from tqdm import tqdm
+import config
 
 root = Path('archive/utf-8/')
 
@@ -11,7 +13,7 @@ pd.options.display.float_format = '{:,.0f}'.format
 
 # create database with sqlite3
 # cd db
-# sqlite3 CorpMagnifier.db <CorpMagnifier.db.sql
+# sqlite3 CorpMagnifier.db <create-db.sql
 
 conn = sqlite3.connect('../db/CorpMagnifier.db')
 cur = conn.cursor()
@@ -208,7 +210,17 @@ if __name__ == '__main__':
         '재무상태표-연결',
     ]
 
-    delete_all_records(cur)
+    parser = argparse.ArgumentParser(description='Corporation Magnifier')
+    parser.add_argument('--delete-all-records', '-D', help='Delete all records',
+                        action='store_true', required=False)
+    args = parser.parse_args()
+
+    if args.delete_all_records:
+        ans = input('Delete all records? (y/n)')
+        if ans.lower() == 'y':
+            delete_all_records(cur)
+        else:
+            print('Not deleted')
 
     for dd in data_dirs:
         r = root / Path(dd)
