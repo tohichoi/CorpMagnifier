@@ -196,15 +196,24 @@ def import_document(f):
 
 if __name__ == '__main__':
     data_dirs = [
-        '손익계산서', '손익계산서-연결', '재무상태표', '자본변동표-연결', '재무상태표', '재무상태표-연결', '포괄손익계산서', '포괄손익계산서-연결', '현금흐름표', '현금흐름표-연결',
+        '포괄손익계산서',
+        '포괄손익계산서-연결',
+        '현금흐름표',
+        '현금흐름표-연결',
+        '손익계산서',
+        '손익계산서-연결',
+        # '자본변동표',
+        # '자본변동표-연결',
+        '재무상태표',
+        '재무상태표-연결',
     ]
+
+    delete_all_records(cur)
 
     for dd in data_dirs:
         r = root / Path(dd)
 
         filelist = list(r.rglob('*.txt'))
-
-        delete_all_records(cur)
 
         prev_parent = None
         for f in filelist:
@@ -259,8 +268,9 @@ class Test(unittest.TestCase):
     def test_insert_stock(self):
         delete_all_records(cur)
         # self.f = filelist[1]
-        fn = Path('2017_반기보고서_01_재무상태표_20230301.txt')
-        self.f = root / Path('재무상태표') / fn
+        # fn = Path('2017_반기보고서_01_재무상태표_20230301.txt')
+        fn = Path('2017_사업보고서_05_자본변동표_연결_20230524.txt')
+        self.f = root / Path('자본변동표-연결') / fn
         year = int(fn.name[:4])
         df = import_document(self.f)
         res = insert_stock_records(cur, df)
