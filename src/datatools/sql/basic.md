@@ -25,9 +25,6 @@ order by date;
 ```
 
 ## 값 변경
-```sql
-SELECT NULLIF(amount, 'nan') FROM ReportItem;
-```
 
 ```sql
 update ReportItem set amount = replace(amount, 'nan', NULL) where amount = 'nan';
@@ -36,6 +33,13 @@ update ReportItem set amount = replace(amount, 'nan', NULL) where amount = 'nan'
 ```sql
 select amount from ReportItem where amount is NULL
 ```
+
+### 단지 결과를 보여주기만 한다
+
+```sql
+SELECT NULLIF(amount, 'nan') FROM ReportItem;
+```
+
 
 ## 업종 분류
 
